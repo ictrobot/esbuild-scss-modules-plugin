@@ -110,14 +110,12 @@ export const ScssModulesPlugin = (options: Partial<PluginOptions> = {}) => ({
                     const sourceExt = path.extname(sourceFullPath);
                     const sourceBaseName = path.basename(sourceFullPath, sourceExt);
 
-                    const jsContent = await buildScssModulesJS(sourceFullPath, fullOptions);
-
                     if (bundle) {
                         return {
                             path: args.path,
                             namespace: PLUGIN,
                             pluginData: {
-                                content: jsContent
+                                sourceFullPath
                             }
                         };
                     }
@@ -131,6 +129,7 @@ export const ScssModulesPlugin = (options: Partial<PluginOptions> = {}) => ({
                         const targetSubpath = absoluteOutdir.indexOf(entryRelDir) === -1 ? path.join(entryRelDir, `${sourceBaseName}.css.js`) : `${sourceBaseName}.css.js`;
                         const target = path.resolve(absoluteOutdir, targetSubpath);
 
+                        const jsContent = await buildScssModulesJS(sourceFullPath, fullOptions);
                         await fs.mkdir(path.dirname(target), {recursive: true});
                         await fs.writeFile(target, jsContent);
                     }
@@ -143,8 +142,13 @@ export const ScssModulesPlugin = (options: Partial<PluginOptions> = {}) => ({
             }
         );
 
-        build.onLoad({ filter: /\.modules?\.scss$/, namespace: PLUGIN }, (args) => {
-            return { contents: args.pluginData.content, loader: 'js' };
+        build.onLoad({ filter: /\.modules?\.scss$/, namespace: PLUGIN }, async ({ pluginData: { sourceFullPath }}) => {
+            const contents = await buildScssModulesJS(sourceFullPath, fullOptions);
+            return {
+                contents,
+                loader: 'js',
+                watchFiles: [sourceFullPath],
+            };
         });
     }
 } as esbuild.Plugin);

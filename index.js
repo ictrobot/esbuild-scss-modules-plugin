@@ -104,13 +104,12 @@ const ScssModulesPlugin = (options = {}) => ({
             const result = await (async () => {
                 const sourceExt = path_1.default.extname(sourceFullPath);
                 const sourceBaseName = path_1.default.basename(sourceFullPath, sourceExt);
-                const jsContent = await buildScssModulesJS(sourceFullPath, fullOptions);
                 if (bundle) {
                     return {
                         path: args.path,
                         namespace: PLUGIN,
                         pluginData: {
-                            content: jsContent
+                            sourceFullPath
                         }
                     };
                 }
@@ -121,6 +120,7 @@ const ScssModulesPlugin = (options = {}) => ({
                     const entryRelDir = isEntryAbsolute ? path_1.default.dirname(path_1.default.relative(args.resolveDir, args.path)) : path_1.default.dirname(args.path);
                     const targetSubpath = absoluteOutdir.indexOf(entryRelDir) === -1 ? path_1.default.join(entryRelDir, `${sourceBaseName}.css.js`) : `${sourceBaseName}.css.js`;
                     const target = path_1.default.resolve(absoluteOutdir, targetSubpath);
+                    const jsContent = await buildScssModulesJS(sourceFullPath, fullOptions);
                     await promises_1.default.mkdir(path_1.default.dirname(target), { recursive: true });
                     await promises_1.default.writeFile(target, jsContent);
                 }
@@ -130,8 +130,13 @@ const ScssModulesPlugin = (options = {}) => ({
                 results.set(sourceFullPath, result);
             return result;
         });
-        build.onLoad({ filter: /\.modules?\.scss$/, namespace: PLUGIN }, (args) => {
-            return { contents: args.pluginData.content, loader: 'js' };
+        build.onLoad({ filter: /\.modules?\.scss$/, namespace: PLUGIN }, async ({ pluginData: { sourceFullPath } }) => {
+            const contents = await buildScssModulesJS(sourceFullPath, fullOptions);
+            return {
+                contents,
+                loader: 'js',
+                watchFiles: [sourceFullPath],
+            };
         });
     }
 });
