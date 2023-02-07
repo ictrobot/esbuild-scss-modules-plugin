@@ -80,7 +80,7 @@ const classes = ${classNames};
 const css = \`${result.css}\`;
 ${options.inject && `
 (function() {
-  if (!document.getElementById(digest)) {
+  if (typeof document !== "undefined" && !document.getElementById(digest)) {
     var ele = document.createElement('style');
     ele.id = digest;
     ele.textContent = css;
